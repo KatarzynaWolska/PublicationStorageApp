@@ -1,0 +1,53 @@
+version: '3'
+
+services:
+  nginx:
+    image: chaberb/nginx-ssl
+    depends_on:
+      - web
+      - api
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx-uwsgi.conf:/etc/nginx/nginx.conf
+
+  web:
+    build: ./web/
+    container_name: web
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./web:/var/www/app
+  
+  redis_users:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+    hostname: redis_users
+    container_name: redis_users
+
+  redis_files:
+    image: "redis:alpine"
+    command: --port 6380
+    ports:
+      - "6380:6380"
+    hostname: redis_files
+    container_name: redis_files
+
+  redis_auth:
+    image: "redis:alpine"
+    command: --port 6381
+    ports:
+      - "6381:6381"
+    hostname: redis_auth
+    container_name: redis_auth
+
+  api:
+    build: ./api/
+    environment:
+      - PYTHONUNBUFFERED=1
+    links:
+      - redis_users
+      - redis_files
+    container_name: api
+

@@ -1,0 +1,96 @@
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: sans-serif;
+}
+
+.app-box {
+    display:block;
+    margin-bottom: 500px;
+    position: absolute;
+    height: auto;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    padding: 40px;
+    background: rgba(0, 0, 0, .8);
+    box-sizing: border-box;
+    box-shadow: 0 15px 25px rgba(0, 0, 0, .5);
+    border-radius: 10px;
+}
+
+.app-box h1 {
+    margin: 0 0 30px;
+    padding: 0;
+    color: white;
+    text-align: center;
+    z-index: 100;
+}
+
+.app-box p {
+    margin: 0 0 30px;
+    padding: 0;
+    color: white;
+    text-align: left; /*center*/
+    z-index: 100;
+}
+
+
+.app-box input {
+    padding: 10px 0;
+    margin-bottom: 30px;
+    border: none;
+    outline: none;
+    background: none;
+    color: white;
+    font-size: 16px;
+    width: 100%;
+    border-bottom: 1px solid #68ff76;
+}
+
+.app-box label {
+    top: 0;
+    left: 0;
+    padding: 0 0;
+    margin-bottom: 30px;
+    font-size: 16px;
+    color: white;
+    pointer-events: none;
+    transition: .5s;
+}
+
+.app-box button {
+    color: white;
+    background: #2c8cff;
+    border: none;
+    outline: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    align-content: center; /*to nie działa*/
+    border-radius: 5px;
+}
+
+.app-box input[type=submit] {
+    color: white;
+    background: #2c8cff;
+    border: none;
+    outline: none;
+    width: 100%;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.app-box .logout a {
+    font-size: 25px;
+    color: #68ff76;
+    transition: .5s;
+    display: block;
+    text-align: center;
+}
+
+.app-box input[type=file] {
+    border-bottom: none;
+}

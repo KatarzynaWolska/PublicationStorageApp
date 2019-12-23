@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="/static/styles.css">
+    </head>
+    <body>
+    <div class="app-box">      
+        <div id="publications_list">
+            <h1>Your publications:</h1>
+        </div>
+
+        <form action="/add_publication_form">
+            <button>Add publication</button>
+        </form>
+
+    <script f={{publications}}>
+        window.onload = function() {
+            var pubsList = ''
+
+            var f = '{{ publications|safe }}'
+
+            var publications = JSON.parse(f)
+
+            for(var i = 0; i < publications["length"]; i++) {
+                pubsList += '<a href="/user_publications/' + publications[i]["pub_id"] + '"/>' + (i+1) + '. ' + publications[i]["name"] +'</p>'
+            }
+
+            document.getElementById("publications_list").innerHTML += pubsList
+        }
+    </script>
+    </div>
+    </body>
+</html>

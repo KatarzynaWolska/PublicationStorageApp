@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="/static/styles.css">
+    </head>
+    <body>
+    <div class="app-box" id="info_box">
+        <form action="/user_publications/{{PID}}/upload_file" method="POST" enctype="multipart/form-data">
+            <input type="file" name="file"/>
+            <input type="submit" value="Send"/>
+        </form>
+
+        <button>
+            <a href="/user_publications/{{PID}}/delete">Delete publication</a>
+        </button>
+
+        <div id="files_list">
+            <h1>Files list:</h1>
+        </div>
+    </div>
+
+    <script f={{publication}}>
+        var pubInfo = ''
+
+        var p = '{{ publication|safe }}'
+
+        var publication = JSON.parse(p)
+
+        for(var info in publication) {
+            if(info === 'name') {
+                pubInfo += '<h1>' + publication[info] + '</h1>'
+            } else if(info === 'pub_id') {
+
+            } else {
+                pubInfo += '<p>' + info + ' - ' +  publication[info] + '</p>'
+            }
+        }
+
+        var filesList = ''
+
+        var f = '{{ files_list|safe }}'
+
+        var files = JSON.parse(f)
+
+        for(var key in files) {
+            filesList += '<div><a href="/user_publications/' + publication["pub_id"] + '/files/' + key + '">' + files[key] + '</a>'
+            filesList += '<button><a href="/user_publications/' + publication["pub_id"] + '/files/' + key + '/delete">Delete file</a></button></div>'
+        }
+
+        document.getElementById("info_box").innerHTML += pubInfo
+        document.getElementById("files_list").innerHTML += filesList
+    </script>
+    </body>
+</html>
