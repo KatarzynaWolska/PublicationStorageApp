@@ -73,6 +73,24 @@ def add_publication_form():
     return redirect('/login')
 
 
+@app.route('/update_publication_form/<pid>')
+def update_publication_form(pid):
+    session_id = request.cookies.get('session_id')
+
+    if session_id:
+        if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
+            res_publication = requests.get(f'http://api:5000/publications/{pid}', headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+
+            if res_publication.status_code == 200:
+                pub = res_publication.json()
+
+                return render_template('update_publication.html', PID=pid, name_value=pub['name'], authors_value=pub['authors'], year_value=pub['year'], publisher_value=pub['publisher'])
+            else:
+                return redirect('/user_publications')
+
+    return redirect('/login')
+
+
 @app.route('/add_user_publication', methods=['POST'])
 def add_user_publication():
     session_id = request.cookies.get('session_id')
@@ -128,13 +146,21 @@ def get_user_publication(pid):
     return redirect('/login')
 
 
-@app.route('/user_publications/<pid>/update')
+@app.route('/user_publications/<pid>/update', methods=['POST'])
 def update_publication(pid):
     session_id = request.cookies.get('session_id')
 
-    #if session_id:
-        #if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
-            #TODO:
+    if session_id:
+        if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
+            name = request.form.get('name')
+            authors = request.form.get('authors')
+            year = request.form.get('year')
+            publisher = request.form.get('publisher')
+
+            res = requests.put(f'http://api:5000/publications/{pid}', json={'name' : name, 'authors' : authors, 'year': year, 'publisher': publisher}, headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+            print(res.text)
+            print(res.status_code)
+            return redirect('/user_publications')
 
     return redirect('/login')
 

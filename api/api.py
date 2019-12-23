@@ -118,6 +118,7 @@ def get_update_or_delete_publication(pid):
 
       elif request.method == 'PUT':
         pubs_json_array.remove(user_pub)
+
         pub_id = user_pub['pub_id']
         name = request.json['name']
         authors = request.json['authors']
@@ -125,17 +126,10 @@ def get_update_or_delete_publication(pid):
         publisher = request.json['publisher']
 
         new_pub_json = json.dumps({"pub_id" : pub_id, "name": name, "authors": authors, "year": year, "publisher": publisher})
-        pubs_json_array = []
+        pubs_json_array.append(json.loads(new_pub_json))
 
-        if pubs != None:
-          pubs_json_array = json.loads(pubs)
-          pubs_json_array.append(json.loads(new_pub_json)) # tu tez było bez loads
-        else:
-          #pubs_json_array.append(new_pub_json)
-          pubs_json_array.append(json.loads(new_pub_json))
-
-      redis_files.hset('publications', payload['id'], json.dumps(pubs_json_array))
-      return Response("Publication updated", status=200)
+        redis_files.hset('publications', payload['id'], json.dumps(pubs_json_array))
+        return Response("Publication updated", status=200)
 
   else:
     return Response("Invalid token - please try again", status=400)
