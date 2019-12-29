@@ -3,3 +3,4 @@ redis
 pyjwt
 python-dotenv
 requests
+flask_hal

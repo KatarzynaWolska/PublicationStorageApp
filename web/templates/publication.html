@@ -5,6 +5,10 @@
     </head>
     <body>
     <div class="app-box" id="info_box">
+        <button>
+            <a href="/user_publications">My publications</a>
+        </button>
+
         <form action="/user_publications/{{PID}}/upload_file" method="POST" enctype="multipart/form-data">
             <input type="file" name="file"/>
             <input type="submit" value="Send"/>
@@ -21,6 +25,10 @@
         <div id="files_list">
             <h1>Files list:</h1>
         </div>
+
+        <div class="logout">
+            <a href="/logout">Logout</a>
+        </div>
     </div>
 
     <script f={{publication}}>
@@ -31,7 +39,7 @@
         var publication = JSON.parse(p)
 
         for(var info in publication) {
-            if(info === 'name') {
+            if(info === 'title') {
                 pubInfo += '<h1>' + publication[info] + '</h1>'
             } else if(info === 'pub_id') {
 

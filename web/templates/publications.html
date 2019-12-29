@@ -13,6 +13,10 @@
             <button>Add publication</button>
         </form>
 
+        <div class="logout">
+            <a href="/logout">Logout</a>
+        </div>
+
     <script f={{publications}}>
         window.onload = function() {
             var pubsList = ''
@@ -22,8 +26,12 @@
             var publications = JSON.parse(f)
 
             for(var i = 0; i < publications["length"]; i++) {
-                pubsList += '<a href="/user_publications/' + publications[i]["pub_id"] + '"/>' + (i+1) + '. ' + publications[i]["name"] +'</p>'
+                pubsList += '<a href="/user_publications/' + publications[i]["pub_id"] + '"/>' + (i+1) + '. ' + publications[i]["title"] +'</p>'
             }
+
+            /*for(var key in publications) {
+                pubsList += '<div><a href="' + publications[key] + '">' + key + '</a>'
+            }*/
 
             document.getElementById("publications_list").innerHTML += pubsList
         }

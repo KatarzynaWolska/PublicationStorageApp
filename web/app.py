@@ -2,7 +2,7 @@ from flask import Flask
 from flask import request
 from flask import make_response, send_file
 from flask import render_template
-from flask import jsonify
+from flask import jsonify, session
 from os import getenv
 from uuid import uuid4
 from jwt import encode
@@ -48,6 +48,7 @@ def auth():
     password = request.form.get('password')
 
     res = requests.post('http://api:5000/login_user', json={'username' : username, 'password' : password})
+    redis_auth.hset('links', 'create_or_get_publications', res.json()['_links']['publications']['href'])            # pododawac login w redisie zeby moglo korzystac kilku uzytkownikow albo session id
     response = make_response('', 303)
 
     if res.status_code == 200:
@@ -55,11 +56,16 @@ def auth():
         redis_auth.set("session_id", session_id, ex=SESSION_TIME)
         response.set_cookie("session_id", session_id, max_age=SESSION_TIME)
         response.headers["Location"] = "/welcome"     # ogarnąc czy nie da sie lepiej
-        redis_auth.set('token', res.text)
+        redis_auth.set('token', res.json()['token'])
+        print('TOKEN')
+        print(res.json()['token'])
         return response
     else:
-        response.set_cookie("session_id", "INVALIDATE", max_age=-1)
-        return redirect("/login")
+        response = redirect('/login')
+        response.set_cookie("session_id", "INVALIDATE", max_age=1)
+        return response
+
+    return redirect('/login')
 
 
 @app.route('/add_publication_form')
@@ -69,6 +75,10 @@ def add_publication_form():
     if session_id:
         if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
             return render_template('add_publication.html')
+        else:
+            response = redirect('/login')
+            response.set_cookie("session_id", "INVALIDATE", max_age=1)
+            return response
 
     return redirect('/login')
 
@@ -79,14 +89,28 @@ def update_publication_form(pid):
 
     if session_id:
         if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
-            res_publication = requests.get(f'http://api:5000/publications/{pid}', headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+
+            pub_url_json = redis_auth.hget('links', 'get_update_or_delete_pubs').decode('utf-8')
+
+            pub_url_json = json.loads(pub_url_json)
+
+            if not pub_url_json.get(pid):
+                return redirect("/error?error=Publication+does+not+exist")
+
+            res_publication = requests.get(pub_url_json[pid], headers={'Authorization': redis_auth.get('token').decode('utf-8')})
 
             if res_publication.status_code == 200:
-                pub = res_publication.json()
+                pub = json.loads(res_publication.json()['publication'])
 
-                return render_template('update_publication.html', PID=pid, name_value=pub['name'], authors_value=pub['authors'], year_value=pub['year'], publisher_value=pub['publisher'])
+                return render_template('update_publication.html', PID=pid, title_value=pub['title'], authors_value=pub['authors'], year_value=pub['year'], publisher_value=pub['publisher'])
             else:
-                return redirect('/user_publications')
+                error = res_publication.json()['message'].replace(" ", "+")
+                return redirect(f'/error?error={error}')
+
+        else:
+            response = redirect('/login')
+            response.set_cookie("session_id", "INVALIDATE", max_age=1)
+            return response
 
     return redirect('/login')
 
@@ -97,28 +121,60 @@ def add_user_publication():
 
     if session_id:
         if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
-            name = request.form.get('name')
+            title = request.form.get('title')
             authors = request.form.get('authors')
             year = request.form.get('year')
             publisher = request.form.get('publisher')
 
-            res = requests.post('http://api:5000/publications', json={'name' : name, 'authors' : authors, 'year': year, 'publisher': publisher}, headers={'Authorization': redis_auth.get('token').decode('utf-8')})
-            print(res.text)
-            print(res.status_code)
-            return redirect('/user_publications')
-    
+            url = redis_auth.hget('links', 'create_or_get_publications').decode('utf-8')
+
+            res_create_pub = requests.post(url, json={'title' : title, 'authors' : authors, 'year': year, 'publisher': publisher}, headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+
+            if res_create_pub.status_code == 200:
+                publications = res_create_pub.json()
+
+                get_update_or_delete_pub_dict = {}
+                upload_or_get_pub_files = {}
+                
+                for pub in publications['_links']:
+                    if pub != 'self':
+                        for data in publications['_links'][pub]:
+                            if data.get('name'):
+                                if data['name'] == 'get_update_or_delete_pub':
+                                    get_update_or_delete_pub_dict[pub] = data['href']
+                                elif data['name'] == 'upload_or_get_files':
+                                    upload_or_get_pub_files[pub] = data['href']
+
+                redis_auth.hset('links', 'get_update_or_delete_pubs', json.dumps(get_update_or_delete_pub_dict))
+                redis_auth.hset('links', 'upload_or_get_pub_files', json.dumps(upload_or_get_pub_files))
+
+                return redirect('/user_publications')
+            
+            else:
+                error = res_create_pub.json()['message'].replace(" ", "+")
+                return redirect(f'/error?error={error}')
+
+        else:
+            response = redirect('/login')
+            response.set_cookie("session_id", "INVALIDATE", max_age=1)
+            return response
+
     return redirect('/login')
 
 
-@app.route('/welcome', methods=['GET'])
+@app.route('/welcome')
 def welcome():
     session_id = request.cookies.get('session_id')
 
     if session_id:
         if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
             return render_template('welcome.html')
+        else:
+            response = redirect('/login')
+            response.set_cookie("session_id", "INVALIDATE", max_age=1)
+            return response
 
-    return render_template('login.html')
+    return redirect('/login')
 
 
 @app.route('/user_publications/<pid>')
@@ -128,21 +184,38 @@ def get_user_publication(pid):
     if session_id:
         if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
             
-            res_publication = requests.get(f'http://api:5000/publications/{pid}', headers={'Authorization': redis_auth.get('token').decode('utf-8')})
-            res_pub_files = requests.get(f'http://api:5000/publications/{pid}/files', headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+            pub_url_json = redis_auth.hget('links', 'get_update_or_delete_pubs').decode('utf-8')
+            pub_url_json = json.loads(pub_url_json)
+
+            files_pub_url_json = redis_auth.hget('links', 'upload_or_get_pub_files').decode('utf-8')
+            files_pub_url_json = json.loads(files_pub_url_json)
+
+            if not pub_url_json.get(pid):
+                return redirect("/error?error=Publication+does+not+exist")
+
+            res_publication = requests.get(pub_url_json[pid], headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+            res_pub_files = requests.get(files_pub_url_json[pid], headers={'Authorization': redis_auth.get('token').decode('utf-8')})
             
             if res_publication.status_code == 200 and res_pub_files.status_code == 200:
-                publication = res_publication.json()
-
-                if bool(res_pub_files.json()):
-                    files = res_pub_files.json()
-                else:
-                    files = None
+                #publication = res_publication.json()
+                publication = json.loads(res_publication.json()['publication'])
+                
+                files = json.loads(res_pub_files.json()['files'])
 
                 return render_template('publication.html', PID=pid, publication=json.dumps(publication), files_list=json.dumps(files))
-            else:
-                print(res_publication.text)
-                print(res_pub_files.text)
+            
+            elif res_publication.status_code == 400:
+                error = res_publication.json()['message'].replace(" ", "+")
+                return redirect(f'/error?error={error}')
+
+            elif res_pub_files.status_code == 400:
+                error = res_pub_files.json()['message'].replace(" ", "+")
+                return redirect(f'/error?error={error}')
+        else:
+            response = redirect('/login')
+            response.set_cookie("session_id", "INVALIDATE", max_age=1)
+            return response
+
     return redirect('/login')
 
 
@@ -152,15 +225,29 @@ def update_publication(pid):
 
     if session_id:
         if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
-            name = request.form.get('name')
+            title = request.form.get('title')
             authors = request.form.get('authors')
             year = request.form.get('year')
             publisher = request.form.get('publisher')
 
-            res = requests.put(f'http://api:5000/publications/{pid}', json={'name' : name, 'authors' : authors, 'year': year, 'publisher': publisher}, headers={'Authorization': redis_auth.get('token').decode('utf-8')})
-            print(res.text)
-            print(res.status_code)
-            return redirect('/user_publications')
+            pub_url_json = redis_auth.hget('links', 'get_update_or_delete_pubs').decode('utf-8')
+
+            pub_url_json = json.loads(pub_url_json)
+
+            if not pub_url_json.get(pid):
+                return redirect("/error?error=Publication+does+not+exist")
+
+            res = requests.put(pub_url_json[pid], json={'title' : title, 'authors' : authors, 'year': year, 'publisher': publisher}, headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+            
+            if res.status_code == 200:
+                return redirect('/user_publications')
+            else:
+                error = res.json()['message'].replace(" ", "+")
+                return redirect(f'/error?error={error}')
+        else:
+            response = redirect('/login')
+            response.set_cookie("session_id", "INVALIDATE", max_age=1)
+            return response
 
     return redirect('/login')
 
@@ -175,30 +262,67 @@ def upload_file(pid):
             file_to_send = {'file': (f.filename, f.read(), f.content_type)}
             if f.filename == '':
                 return redirect(f'/user_publications/{pid}')
+     
+            pub_url_json = redis_auth.hget('links', 'upload_or_get_pub_files').decode('utf-8')
+            pub_url_json = json.loads(pub_url_json)
 
-            res = requests.post(f'http://api:5000/publications/{pid}/files', files=file_to_send, headers={'Authorization': redis_auth.get('token').decode('utf-8')})
-            if res.status_code == 200:
-                print(res.text)
+            if not pub_url_json.get(pid):
+                return redirect("/error?error=Publication+does+not+exist")
+
+            res_upload_file = requests.post(pub_url_json[pid], files=file_to_send, headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+
+            if res_upload_file.status_code == 200:
+                file_links = res_upload_file.json()['_links']
+        
+                download_or_delete_file_dict = {}
+
+                for link in file_links:
+                    if link != 'self':
+                        if file_links[link].get('name'):
+                            if file_links[link]['name'] == 'download_or_delete_file':
+                                download_or_delete_file_dict[link] = file_links[link]['href']
+
+                redis_auth.hset('links', 'download_or_delete_pub_file', json.dumps(download_or_delete_file_dict))
+            
                 return redirect(f'/user_publications/{pid}')
             else:
-                print(res.text)
+                error = res_upload_file.json()['message'].replace(" ", "+")
+                return redirect(f'/error?error={error}')
+
+        else:
+            response = redirect('/login')
+            response.set_cookie("session_id", "INVALIDATE", max_age=1)
+            return response
+
     return redirect('/login')
 
 
-@app.route('/user_publications/<pid>/files/<fid>', methods=['GET'])
+@app.route('/user_publications/<pid>/files/<fid>')
 def download_file(pid, fid):
     session_id = request.cookies.get('session_id')
 
     if session_id:
         if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
-            
-            res = requests.get(f'http://api:5000/publications/{pid}/files/{fid}', headers={'Authorization': redis_auth.get('token').decode('utf-8')})
-            
-            value, params = cgi.parse_header(res.headers['Content-Disposition'])
-            return send_file(io.BytesIO(res.content), mimetype=res.headers['Content-Type'], attachment_filename=params['filename'], as_attachment=True)
-            #return send_file(res.content, mimetype=request.headers['Content-Type'],  as_attachment=True)
-            #return send_file(io.BytesIO(file_to_download.encode('ISO-8859-1')), mimetype=file_content_type, attachment_filename=file_name, as_attachment=True)
 
+            file_url_json = redis_auth.hget('links', 'download_or_delete_pub_file').decode('utf-8')
+            file_url_json = json.loads(file_url_json)
+
+            
+            if not file_url_json.get(fid):
+                return redirect("/error?error=File+does+not+exist")
+
+            res = requests.get(file_url_json[fid], headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+            
+            if res.status_code == 200:
+                value, params = cgi.parse_header(res.headers['Content-Disposition'])
+                return send_file(io.BytesIO(res.content), mimetype=res.headers['Content-Type'], attachment_filename=params['filename'], as_attachment=True)
+            else:
+                error = res.json()['message'].replace(" ", "+")
+                return redirect(f'/error?error={error}')
+        else:
+            response = redirect('/login')
+            response.set_cookie("session_id", "INVALIDATE", max_age=1)
+            return response
 
     return redirect('/login')
 
@@ -209,9 +333,25 @@ def delete_publication(pid):
 
     if session_id:
         if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
-            res = requests.delete(f'http://api:5000/publications/{pid}', headers={'Authorization': redis_auth.get('token').decode('utf-8')})
-            print(res.text)
-            return redirect('/user_publications')
+            
+            pub_url_json = redis_auth.hget('links', 'get_update_or_delete_pubs').decode('utf-8')
+
+            pub_url_json = json.loads(pub_url_json)
+
+            if not pub_url_json.get(pid):
+                return redirect("/error?error=Publication+does+not+exist")
+
+            res_delete_publication = requests.delete(pub_url_json[pid], headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+
+            if res_delete_publication.status_code == 200:
+                return redirect('/user_publications')
+            else:
+                error = res_delete_publication.json()['message'].replace(" ", "+")
+                return redirect(f'/error?error={error}')
+        else:
+            response = redirect('/login')
+            response.set_cookie("session_id", "INVALIDATE", max_age=1)
+            return response
 
     return redirect('/login')
 
@@ -222,9 +362,24 @@ def delete_file(pid, fid):
 
     if session_id:
         if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
-            res = requests.delete(f'http://api:5000/publications/{pid}/files/{fid}', headers={'Authorization': redis_auth.get('token').decode('utf-8')})
-            print(res.text)
-            return redirect(f'/user_publications/{pid}')
+
+            file_url_json = redis_auth.hget('links', 'download_or_delete_pub_file').decode('utf-8')
+            file_url_json = json.loads(file_url_json)
+
+            if not file_url_json.get(fid):
+                return redirect("/error?error=File+does+not+exist")
+
+            res = requests.delete(file_url_json[fid], headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+            
+            if res.status_code == 200:
+                return redirect(f'/user_publications/{pid}')
+            else:
+                error = res.json()['message'].replace(" ", "+")
+                return redirect(f'/error?error={error}')
+        else:
+            response = redirect('/login')
+            response.set_cookie("session_id", "INVALIDATE", max_age=1)
+            return response
 
     return redirect('/login')
 
@@ -236,91 +391,52 @@ def user_publications():
     if session_id:
         if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
 
-            res = requests.get('http://api:5000/publications', headers={'Authorization': redis_auth.get('token').decode('utf-8')})
+            url = redis_auth.hget('links', 'create_or_get_publications').decode('utf-8')
+            res = requests.get(url, headers={'Authorization': redis_auth.get('token').decode('utf-8')})
             
             if res.status_code == 200:
                 publications = res.json()
-
-                """
-                if bool(publications):
-                    pubs = json.dumps(publications)
-                else:
-                    pubs = None
-                """
-                return render_template('publications.html', publications=json.dumps(publications))
+                return render_template('publications.html', publications=publications['pubs'])
 
             else:
-                return redirect('/login')
+                error = res.json()['message'].replace(" ", "+")
+                return redirect(f'/error?error={error}')
+        else:
+            response = redirect('/login')
+            response.set_cookie("session_id", "INVALIDATE", max_age=1)
+            return response
 
     return redirect('/login')
 
 
-def redirect(location):
-    response = make_response('', 303)
-    response.headers["Location"] = location
-    return response
-
-"""
-@app.route('/callback_error')
-def callback_error():
+@app.route('/error')
+def error():
     session_id = request.cookies.get('session_id')
     err = request.args.get('error')
 
     if not session_id:
         return redirect("/login")
 
-    if(r.get("session_id") != None and r.get("session_id").decode('utf-8') == session_id):
+    if(redis_auth.get("session_id") != None and redis_auth.get("session_id").decode('utf-8') == session_id):
         if err:
-            return f"<h1>WEB</h1> {err}", 400
+            return f"{err}", 400
         return f"<h1>WEB</h1> Something went wrong", 400
 
     return redirect("/login")
 
 
-@app.route('/callback')
-def uploaded():
-    session_id = request.cookies.get('session_id')
-    fid = request.args.get('fid')
-    content_type = request.args.get('content_type','text/plain')
-
-    if not session_id:
-        return redirect("/login")
-    
-    if(r.get("session_id") != None and r.get("session_id").decode('utf-8') == session_id):
-        if not fid:
-            return f"<h1>WEB</h1> Upload successfull, but no fid returned", 500
-    
-        return f"<h1>WEB</h1> User {session_id} uploaded {fid} ({content_type})", 200
-    
-    return redirect("/login")
-
-
 @app.route('/logout')
 def logout():
-    response = redirect("/login")
     session_id = request.cookies.get('session_id')
-    response.set_cookie("session_id", "INVALIDATE", max_age=-1)
-    r.delete("session_id")
-    return response
+    if session_id:
+        redis_auth.delete('session_id')         # pozniej to pozmieniac
+        response = redirect("/login")
+        response.set_cookie("session_id", "LOGGED_OUT", max_age=1)
+        return response
+    return redirect("/login")
 
 
 def redirect(location):
     response = make_response('', 303)
     response.headers["Location"] = location
     return response
-
-
-def create_download_token():
-    exp = datetime.datetime.utcnow() + datetime.timedelta(seconds=TOKEN_TIME)
-    return encode({"iss":"web.company.com", "exp":exp, "action":"download"}, JWT_SECRET, "HS256")
-
-
-def create_upload_token():
-    exp = datetime.datetime.utcnow() + datetime.timedelta(seconds=TOKEN_TIME)
-    return encode({"iss":"web.company.com", "exp":exp, "action":"upload"}, JWT_SECRET, "HS256")
-
-
-def create_get_files_token():
-    exp = datetime.datetime.utcnow() + datetime.timedelta(seconds=TOKEN_TIME)
-    return encode({"iss":"web.company.com", "exp":exp, "action":"get_files"}, JWT_SECRET, "HS256")
-"""

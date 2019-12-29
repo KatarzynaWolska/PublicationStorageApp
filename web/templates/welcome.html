@@ -11,39 +11,9 @@
                     Your publications
                 </button>
             </form>
+            <div class="logout">
+                <a href="/logout">Logout</a>
+            </div>
         </div>
     </body>
-    <!--<body>
-    <div class="app-box">
-    <h1> WEB </h1>
-    <form action="{{PDF}}/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="file"/>
-        <input type="hidden" name="token"    value="{{upload_token}}" />
-        <input type="hidden" name="callback" value="{{WEB}}/callback" />
-        <input type="submit" value="Send"/>
-    </form>
-
-    <div id="files_list">
-        <h1>List of files</h1>
-    </div>
-
-    <div class="logout">
-        <a href="/logout">Logout</a>
-    </div>
-    <script f={{files}}>
-        var filesList = ''
-
-        var f = '{{ files|safe }}'
-
-        var files = JSON.parse(f)
-
-        for(var key in files) {
-            filesList += '<div><a href="{{PDF}}/download/' + key + '?download_token={{download_token}}">' + files[key] + '</a></div>'
-        }
-
-        document.getElementById("files_list").innerHTML += filesList
-    </script>
-
-    </div>
-    </body>-->
 </html>

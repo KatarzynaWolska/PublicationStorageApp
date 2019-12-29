@@ -12,7 +12,8 @@ services:
       - ./nginx-uwsgi.conf:/etc/nginx/nginx.conf
 
   web:
-    build: ./web/
+    build: ./web
+    image: chaberb/flask-jwt
     container_name: web
     environment:
       - PYTHONUNBUFFERED=1
@@ -43,7 +44,10 @@ services:
     container_name: redis_auth
 
   api:
-    build: ./api/
+    build: ./api
+    image: chaberb/flask-jwt
+    volumes:
+      - ./api:/var/www/app
     environment:
       - PYTHONUNBUFFERED=1
     links:
