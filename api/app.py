@@ -41,26 +41,28 @@ def post_or_get_publication_files(pid):
         redis_files.hset("content_types", fid, content_type)
         f.close()
 
-        files = redis_files.hgetall(pid)
-      
-        api_links=link.Collection()
-
-        for pub_file in files:
-          l = link.Link(pub_file, 'http://api:5000/publications/' + pid + '/files/' + pub_file)
-          l.name = "download_or_delete_file"
-          api_links.append(l)
-
-        return HALResponse(response=document.Document(data={'message': 'File uploaded'}
-                                  ,links=api_links).to_json(), status=200)
+        data = {'message': 'File uploaded'}
 
       elif request.method == 'GET':
         files = redis_files.hgetall(pid)
 
         if files != None:
-          return HALResponse(response=document.Document(data={'files': json.dumps(files)}).to_json(), status=200)
+          data = {'files': json.dumps(files)}
         else:
-          return HALResponse(response=document.Document(data={'files': json.dumps([])}).to_json(), status=200)
+          data = {'files': json.dumps([])}
   
+      files = redis_files.hgetall(pid)
+      
+      api_links=link.Collection()
+
+      for pub_file in files:
+        l = link.Link(pub_file, 'http://api:5000/publications/' + pid + '/files/' + pub_file)
+        l.name = "download_or_delete_file"
+        api_links.append(l)
+
+      return HALResponse(response=document.Document(data=data
+                                  ,links=api_links).to_json(), status=200)
+
   else:
       return HALResponse(response=document.Document(data={'message': 'Invalid token - please try again'}).to_json(), status=400)
 
@@ -153,11 +155,13 @@ def publications():
     payload = decode(token, JWT_SECRET)
     pubs = redis_files.hget('publications', payload['id'])
 
+    data = {}
+
     if request.method == 'GET':
       if(pubs != None):
-        return HALResponse(response=document.Document(data={'pubs': json.dumps(json.loads(pubs))}).to_json(), status=200)
+        data = {'pubs': json.dumps(json.loads(pubs))}
       else:
-        return HALResponse(response=document.Document(data={'pubs': json.dumps([])}).to_json(), status=200)
+        data = {'pubs': json.dumps([])}
 
     elif request.method == 'POST':
       pub_id = str(uuid4())
@@ -178,18 +182,21 @@ def publications():
       redis_files.hset('publications', payload['id'], json.dumps(pubs_json_array))
 
       pubs = redis_files.hget('publications', payload['id'])
-      
-      api_links=link.Collection()
+            
+      data = {'message': 'Publication added'}
 
+    api_links=link.Collection()
+
+    if pubs:
       for pub in json.loads(pubs):
-        l = link.Link(pub['pub_id'], 'http://api:5000/publications/' + pub['pub_id'])
-        l.name = "get_update_or_delete_pub"
-        api_links.append(l)
-        l = link.Link(pub['pub_id'], 'http://api:5000/publications/' + pub['pub_id'] + '/files')
-        l.name = "upload_or_get_files"
-        api_links.append(l)
+          l = link.Link(pub['pub_id'], 'http://api:5000/publications/' + pub['pub_id'])
+          l.name = "get_update_or_delete_pub"
+          api_links.append(l)
+          l = link.Link(pub['pub_id'], 'http://api:5000/publications/' + pub['pub_id'] + '/files')
+          l.name = "upload_or_get_files"
+          api_links.append(l)
 
-      return HALResponse(response=document.Document(data={'message': 'Publication added'}
+    return HALResponse(response=document.Document(data=data
                                 ,links=api_links).to_json(), status=200)
 
   else:
