@@ -6,7 +6,7 @@ body {
 }
 
 .app-box {
-    display:block;
+    display: inline-block;
     margin-bottom: 500px;
     position: absolute;
     height: auto;
@@ -26,6 +26,15 @@ body {
     padding: 0;
     color: white;
     text-align: center;
+    z-index: 100;
+}
+
+.app-box h2 {
+    margin: 0 0 30px;
+    padding: 0;
+    color: white;
+    text-align: center;
+    font-size: large;
     z-index: 100;
 }
 
@@ -83,12 +92,23 @@ body {
     border-radius: 5px;
 }
 
+.app-box a {
+    text-decoration: none;
+}
+
+.app-box a:link, a:visited {
+    color: blue;
+}
+.app-box a:hover {
+    color: red;
+}
+
 .app-box .logout a {
-    font-size: 25px;
+    font-size: 20px;
     color: #68ff76;
     transition: .5s;
     display: block;
-    text-align: center;
+    text-align: right;
 }
 
 .app-box input[type=file] {

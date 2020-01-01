@@ -4,31 +4,58 @@
         <link rel="stylesheet" href="/static/styles.css">
     </head>
     <body>
-    <div class="app-box" id="info_box">
-        <button>
-            <a href="/user_publications">My publications</a>
-        </button>
+    <div class="app-box">
+        <div class="logout">
+            <a href="/logout">Logout</a>
+        </div>
 
+        <!--<button>
+            <a href="/user_publications">My publications</a>
+        </button>-->
+
+        <div style="margin-bottom: 20px;">
+            <form action="/user_publications">
+
+                <button>
+                    Back to my publications
+                </button>
+            </form>
+        </div>
+
+        <div id="info_box"></div>
+
+        <div id="files_list">
+            <h2>Files list:</h2>
+        </div>
+
+                <!--<button>
+            <a href="/update_publication_form/{{PID}}">Update publication</a>
+        </button>-->
+
+        <div style="display:flex; flex-direction: row; justify-content: space-between; align-items: center; padding:20px;">
+            <form action="/update_publication_form/{{PID}}">
+                <button>
+                    Update publication
+                </button>
+            </form>
+
+            <!--<button>
+                <a href="/user_publications/{{PID}}/delete">Delete publication</a>
+            </button>-->
+
+            <form action="/user_publications/{{PID}}/delete">
+                <button>
+                    Delete publication
+                </button>
+            </form>
+        </div>
+
+        <h2>Upload file</h2>
         <form action="/user_publications/{{PID}}/upload_file" method="POST" enctype="multipart/form-data">
             <input type="file" name="file"/>
             <input type="submit" value="Send"/>
         </form>
 
-        <button>
-            <a href="/update_publication_form/{{PID}}">Update publication</a>
-        </button>
-
-        <button>
-            <a href="/user_publications/{{PID}}/delete">Delete publication</a>
-        </button>
-
-        <div id="files_list">
-            <h1>Files list:</h1>
-        </div>
-
-        <div class="logout">
-            <a href="/logout">Logout</a>
-        </div>
     </div>
 
     <script f={{publication}}>
@@ -44,7 +71,7 @@
             } else if(info === 'pub_id') {
 
             } else {
-                pubInfo += '<p>' + info + ' - ' +  publication[info] + '</p>'
+                pubInfo += '<p>' + info.charAt(0).toUpperCase() + info.slice(1) + ': ' +  publication[info] + '</p>'
             }
         }
 
@@ -55,8 +82,10 @@
         var files = JSON.parse(f)
 
         for(var key in files) {
-            filesList += '<div><a href="/user_publications/' + publication["pub_id"] + '/files/' + key + '">' + files[key] + '</a>'
-            filesList += '<button><a href="/user_publications/' + publication["pub_id"] + '/files/' + key + '/delete">Delete file</a></button></div>'
+            //filesList += '<div><a href="/user_publications/' + publication["pub_id"] + '/files/' + key + '">' + files[key] + '</a>'
+            filesList += '<div style="display:flex; flex-direction: row; justify-content: space-around; margin-bottom: 15px;"><form action="/user_publications/' + publication["pub_id"] + '/files/' + key + '"><button>' + files[key] + '</button></form>'
+            //filesList += '<button><a href="/user_publications/' + publication["pub_id"] + '/files/' + key + '/delete">Delete file</a></button></div>'
+            filesList += '<form action="/user_publications/' + publication["pub_id"] + '/files/' + key + '/delete">' + '<button>Delete file</button></form></div>'
         }
 
         document.getElementById("info_box").innerHTML += pubInfo

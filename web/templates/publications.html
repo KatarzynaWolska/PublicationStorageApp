@@ -4,7 +4,10 @@
         <link rel="stylesheet" href="/static/styles.css">
     </head>
     <body>
-    <div class="app-box">      
+    <div class="app-box">
+        <div class="logout">
+            <a href="/logout">Logout</a>
+        </div>      
         <div id="publications_list">
             <h1>Your publications:</h1>
         </div>
@@ -12,10 +15,6 @@
         <form action="/add_publication_form">
             <button>Add publication</button>
         </form>
-
-        <div class="logout">
-            <a href="/logout">Logout</a>
-        </div>
 
     <script f={{publications}}>
         window.onload = function() {

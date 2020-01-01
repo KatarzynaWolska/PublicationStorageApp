@@ -5,15 +5,15 @@
     </head>
     <body>
         <div class="app-box">
-            <h1>Hello!</h1> <!-- zobaczyc czy da sie jakos dodac username-->
+            <div class="logout">
+                <a href="/logout">Logout</a>
+            </div>
+            <h1>Hello {{username}}!</h1> <!-- zobaczyc czy da sie jakos dodac username-->
             <form action="/user_publications">
                 <button>
                     Your publications
                 </button>
             </form>
-            <div class="logout">
-                <a href="/logout">Logout</a>
-            </div>
         </div>
     </body>
 </html>

@@ -26,13 +26,14 @@ def login_user():
 @app.route('/publications/<pid>/files', methods=['POST', 'GET'])
 def post_or_get_publication_files(pid):
   token = request.headers.get('Authorization') or request.args('token')
-  if valid(token):                         
+  if token != None and valid(token):                         
       payload = decode(token, JWT_SECRET)
+      status = 200
 
       if request.method == 'POST':
         f = request.files.get('file')
 
-        if f.filename == '':
+        if f is None or f.filename == '':
           return HALResponse(response=document.Document(data={'message': 'Error - no file provided'}).to_json(), status=400)
 
         fid, content_type = str(uuid4()), f.content_type
@@ -42,6 +43,7 @@ def post_or_get_publication_files(pid):
         f.close()
 
         data = {'message': 'File uploaded'}
+        status = 201
 
       elif request.method == 'GET':
         files = redis_files.hgetall(pid)
@@ -61,7 +63,7 @@ def post_or_get_publication_files(pid):
         api_links.append(l)
 
       return HALResponse(response=document.Document(data=data
-                                  ,links=api_links).to_json(), status=200)
+                                  ,links=api_links).to_json(), status=status)
 
   else:
       return HALResponse(response=document.Document(data={'message': 'Invalid token - please try again'}).to_json(), status=400)
@@ -69,7 +71,7 @@ def post_or_get_publication_files(pid):
 @app.route('/publications/<pid>/files/<fid>', methods=['GET', 'DELETE'])
 def download_or_delete_publication_file(pid, fid):
   token = request.headers.get('Authorization')
-  if valid(token):                         
+  if token != None and valid(token):                         
       payload = decode(token, JWT_SECRET)
 
       if request.method == 'GET':
@@ -78,7 +80,7 @@ def download_or_delete_publication_file(pid, fid):
         file_content_type = redis_files.hget("content_types", fid)
 
         if file_name is None or file_to_download is None or file_content_type is None:
-          return HALResponse(response=document.Document(data={'message': 'File does not exist'}).to_json(), status=400)
+          return HALResponse(response=document.Document(data={'message': 'File does not exist'}).to_json(), status=404)
 
         return send_file(io.BytesIO(file_to_download.encode('ISO-8859-1')), mimetype=file_content_type, attachment_filename=file_name, as_attachment=True)
       
@@ -89,16 +91,16 @@ def download_or_delete_publication_file(pid, fid):
 
         return HALResponse(response=document.Document(data={'message': 'File deleted'}).to_json(), status=200)
   else:
-      return HALResponse(response=document.Document(data={'message': 'Invalid token - please try again'}).to_json(), status=400)
+      return HALResponse(response=document.Document(data={'message': 'Invalid token - please try again'}).to_json(), status=401)
 
 
 @app.route('/publications/<pid>', methods=['GET', 'DELETE', 'PUT'])
 def get_update_or_delete_publication(pid):
   token = request.headers.get('Authorization')
-  if valid(token):                         
+  if token != None and valid(token):                         
       payload = decode(token, JWT_SECRET)
       
-      pubs = redis_files.hget('publications', payload['id'])
+      pubs = redis_files.hget('publications', payload['username'])
 
       if pubs != None:
         pubs_json_array = json.loads(pubs)
@@ -110,14 +112,14 @@ def get_update_or_delete_publication(pid):
             break
 
       if pubs == None or user_pub == None:
-        return HALResponse(response=document.Document(data={'message': 'Error - please try again'}).to_json(), status=400)
+        return HALResponse(response=document.Document(data={'message': 'Error - please try again'}).to_json(), status=404)
 
       if request.method == 'GET':
         return HALResponse(response=document.Document(data={'publication': json.dumps(user_pub)}).to_json(), status=200)
 
       elif request.method == 'DELETE':
         pubs_json_array.remove(user_pub)
-        redis_files.hset('publications', payload['id'], json.dumps(pubs_json_array))
+        redis_files.hset('publications', payload['username'], json.dumps(pubs_json_array))
 
         fids = redis_files.hgetall(pid)
 
@@ -141,21 +143,22 @@ def get_update_or_delete_publication(pid):
         new_pub_json = json.dumps({"pub_id" : pub_id, "title": title, "authors": authors, "year": year, "publisher": publisher})
         pubs_json_array.append(json.loads(new_pub_json))
 
-        redis_files.hset('publications', payload['id'], json.dumps(pubs_json_array))
+        redis_files.hset('publications', payload['username'], json.dumps(pubs_json_array))
         return HALResponse(response=document.Document(data={'message': 'Publication updated'}).to_json(), status=200)
 
   else:
-    return HALResponse(response=document.Document(data={'message': 'Invalid token - please try again'}).to_json(), status=400)
+    return HALResponse(response=document.Document(data={'message': 'Invalid token - please try again'}).to_json(), status=401)
 
 
 @app.route('/publications', methods=['GET', 'POST'])
 def publications():
   token = request.headers.get('Authorization')  # czy token w nagłówku czy w argumentach
-  if valid(token):                              # sprawdzac token tak jak w P2
+  if token != None and valid(token):                              # sprawdzac token tak jak w P2
     payload = decode(token, JWT_SECRET)
-    pubs = redis_files.hget('publications', payload['id'])
+    pubs = redis_files.hget('publications', payload['username'])
 
     data = {}
+    status = 200
 
     if request.method == 'GET':
       if(pubs != None):
@@ -179,11 +182,12 @@ def publications():
       else:
         pubs_json_array.append(json.loads(new_pub_json))
 
-      redis_files.hset('publications', payload['id'], json.dumps(pubs_json_array))
+      redis_files.hset('publications', payload['username'], json.dumps(pubs_json_array))
 
-      pubs = redis_files.hget('publications', payload['id'])
+      pubs = redis_files.hget('publications', payload['username'])
             
       data = {'message': 'Publication added'}
+      status = 201
 
     api_links=link.Collection()
 
@@ -197,29 +201,29 @@ def publications():
           api_links.append(l)
 
     return HALResponse(response=document.Document(data=data
-                                ,links=api_links).to_json(), status=200)
+                                ,links=api_links).to_json(), status=status)
 
   else:
-      return HALResponse(response=document.Document(data={'message': 'Invalid token - please try again'}).to_json(), status=400)
+      return HALResponse(response=document.Document(data={'message': 'Invalid token - please try again'}).to_json(), status=401)
 
 
 def auth(username, password):
-  if(redis_users.hget(username, 'password') != None and redis_users.hget(username, 'password') == password): # zastanowic sie nad metoda laczenia z redisem
-    return HALResponse(response=document.Document(data={'message': 'OK', 'token': create_token(username, password, redis_users.hget(username, 'id')).decode('utf-8')}
+  if(redis_users.get(username) != None and redis_users.get(username) == password): # zastanowic sie nad metoda laczenia z redisem
+    return HALResponse(response=document.Document(data={'message': 'OK', 'token': create_token(username, password).decode('utf-8')}
                             ,links=link.Collection(link.Link('publications', 'http://api:5000/publications'))).to_json(), status=200)
   
   else:
-    return HALResponse(response=document.Document(data={'message': 'Login failed - wrong credentials'}).to_json(), status=400)
+    return HALResponse(response=document.Document(data={'message': 'Login failed - wrong credentials'}).to_json(), status=401)
 
-def create_token(username, password, id):
+def create_token(username, password):
     exp = datetime.datetime.utcnow() + datetime.timedelta(seconds=TOKEN_TIME)
-    return encode({"username":username, "password":password, "id": id, "exp":exp}, JWT_SECRET, "HS256")
+    return encode({"username":username, "password":password, "exp":exp}, JWT_SECRET, "HS256")
 
 
 def valid(token):
   try:
     decoded = decode(token.encode('utf-8'), JWT_SECRET)
-    user_pass = redis_users.hget(decoded['username'], 'password')
+    user_pass = redis_users.get(decoded['username'])
     if user_pass != None and user_pass == decoded['password']:
       return True
     else:
