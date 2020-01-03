@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane fx:id="stackPaneLogin" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="LoginWindowController">
+   <children>
+      <VBox alignment="CENTER" prefHeight="183.0" prefWidth="300.0">
+         <children>
+            <Label alignment="CENTER" text="Login to your account" />
+            <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0">
+               <children>
+                  <Label alignment="CENTER" contentDisplay="CENTER" prefWidth="175.0" text="Login" />
+                  <TextField fx:id="loginTextField" />
+               </children>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0">
+               <children>
+                  <Label alignment="CENTER" contentDisplay="CENTER" prefWidth="175.0" text="Password" />
+                  <PasswordField fx:id="passwordTextField" />
+               </children>
+            </HBox>
+            <Button mnemonicParsing="false" onAction="#logIn" text="Sign in" />
+         </children>
+      </VBox>
+   </children>
+</StackPane>

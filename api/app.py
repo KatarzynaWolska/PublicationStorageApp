@@ -20,8 +20,10 @@ HAL(app)
 
 @app.route('/login_user', methods=['POST'])
 def login_user():
-  return auth(request.json['username'], request.json['password'])
-
+  if('username' in request.json and 'password' in request.json):
+    return auth(request.json['username'], request.json['password'])
+  else:
+    return HALResponse(response=document.Document(data={'message': 'Error - please try again'}).to_json(), status=404) 
 
 @app.route('/publications/<pid>/files', methods=['POST', 'GET'])
 def post_or_get_publication_files(pid):
@@ -66,7 +68,7 @@ def post_or_get_publication_files(pid):
                                   ,links=api_links).to_json(), status=status)
 
   else:
-      return HALResponse(response=document.Document(data={'message': 'Invalid token - please try again'}).to_json(), status=400)
+      return HALResponse(response=document.Document(data={'message': 'Invalid token - please try again'}).to_json(), status=401)
 
 @app.route('/publications/<pid>/files/<fid>', methods=['GET', 'DELETE'])
 def download_or_delete_publication_file(pid, fid):
