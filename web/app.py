@@ -17,20 +17,15 @@ import io
 import cgi
 load_dotenv(verbose=True)
 
-
-PDF = getenv("PDF_HOST")
-API = getenv("API_HOST")
-SESSION_TIME = int(getenv("SESSION_TIME"))
-
 redis_auth = redis.Redis(host='redis_auth', port=6381, charset='ISO-8859-1', decode_responses=True)
+SESSION_TIME = int(getenv("SESSION_TIME"))
 
 app = Flask(__name__)
 
-# DODAC ZEBY SIE NIE WYSYLALO BEZ WSZYTSKICH POL i ZMIENIC CZAS CIASTKA
 
-@app.route('/') # MUSZE CHYBA PODODAWAC DO TRASY ID UZYTKOWNIKA !!!!!!!!!!!!!!!!
+@app.route('/')
 def index():
-    session_id = request.cookies.get('session_id') # zmienić tą nazwę
+    session_id = request.cookies.get('session_id')
     response = redirect('/login')
     
     if session_id:
@@ -41,14 +36,10 @@ def index():
             else:
                 response = redirect('/login')
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
-                redis_auth.hdel("session_id-login", username)
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 return response
 
     return redirect('/login')
-    #if session_id != None and redis_auth.get("session_id") != None and session_id == redis_auth.get("session_id"):
-     #   response = redirect("/welcome")
 
 
 @app.route('/login')
@@ -62,19 +53,16 @@ def auth():
     password = request.form.get('password')
 
     res = requests.post('http://api:5000/login_user', json={'username' : username, 'password' : password})
-    #redis_auth.hset('links', 'create_or_get_publications', res.json()['_links']['publications']['href'])            # pododawac login w redisie zeby moglo korzystac kilku uzytkownikow albo session id
     response = make_response('', 303)
 
     if res.status_code == 200:
         session_id = str(uuid4())
-        redis_auth.hset("session_id-login", session_id, username) ##############################################################################
-        redis_auth.set("session_id_" + username, session_id, ex=SESSION_TIME) ##################################################################
-        redis_auth.hset('links_' + username, 'create_or_get_publications', res.json()['_links']['publications']['href']) #######################
+        redis_auth.hset("session_id-login", session_id, username)
+        redis_auth.set("session_id_" + username, session_id, ex=SESSION_TIME)
+        redis_auth.hset('links_' + username, 'create_or_get_publications', res.json()['_links']['publications']['href'])
         response.set_cookie("session_id", session_id, max_age=SESSION_TIME)
-        response.headers["Location"] = "/welcome"     # ogarnąc czy nie da sie lepiej
+        response.headers["Location"] = "/welcome"
         redis_auth.set('token_' + username, res.json()['token'])
-        print('TOKEN')
-        print(res.json()['token'])
         return response
     else:
         response = redirect('/login')
@@ -97,9 +85,7 @@ def add_publication_form():
             else:
                 response = redirect('/login')
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
-                redis_auth.hdel("session_id-login", username)
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 return response
 
     return redirect('/login')
@@ -134,9 +120,7 @@ def update_publication_form(pid):
 
             else:
                 response = redirect('/login')
-                redis_auth.hdel("session_id-login", username)
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
                 return response
 
@@ -187,9 +171,7 @@ def add_user_publication():
 
             else:
                 response = redirect('/login')
-                redis_auth.hdel("session_id-login", username) 
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
                 return response
 
@@ -205,12 +187,10 @@ def welcome():
 
         if username:
             if(redis_auth.get("session_id_" + username) != None and redis_auth.get("session_id_" + username) == session_id):
-                return render_template('welcome.html', username=username) # mozna dodac username
+                return render_template('welcome.html', username=username)
             else:
                 response = redirect('/login')
-                redis_auth.hdel("session_id-login", username)
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
                 return response
 
@@ -240,11 +220,8 @@ def get_user_publication(pid):
                 res_pub_files = requests.get(files_pub_url_json[pid], headers={'Authorization': redis_auth.get('token_' + username)})
                 
                 if res_publication.status_code == 200 and res_pub_files.status_code == 200:
-                    #publication = res_publication.json()
                     publication = json.loads(res_publication.json()['publication'])
-                    
                     files = json.loads(res_pub_files.json()['files'])
-
                     file_links = res_pub_files.json()['_links']
 
                     download_or_delete_file_dict = {}
@@ -268,9 +245,7 @@ def get_user_publication(pid):
                     return redirect(f'/error?error={error}&status={res_pub_files.status_code}')
             else:
                 response = redirect('/login')
-                redis_auth.hdel("session_id-login", username)
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
                 return response
 
@@ -307,9 +282,7 @@ def update_publication(pid):
                     return redirect(f'/error?error={error}&status={res.status_code}')
             else:
                 response = redirect('/login')
-                redis_auth.hdel("session_id-login", username)
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
                 return response
 
@@ -358,9 +331,7 @@ def upload_file(pid):
 
             else:
                 response = redirect('/login')
-                redis_auth.hdel("session_id-login", username)
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
                 return response
 
@@ -394,9 +365,7 @@ def download_file(pid, fid):
                     return redirect(f'/error?error={error}&status={res.status_code}')
             else:
                 response = redirect('/login')
-                redis_auth.hdel("session_id-login", username)
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
                 return response
 
@@ -429,9 +398,7 @@ def delete_publication(pid):
                     return redirect(f'/error?error={error}&status={res_delete_publication.status_code}')
             else:
                 response = redirect('/login')
-                redis_auth.hdel("session_id-login", username)
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
                 return response
 
@@ -463,9 +430,7 @@ def delete_file(pid, fid):
                     return redirect(f'/error?error={error}&status={res.status_code}')
             else:
                 response = redirect('/login')
-                redis_auth.hdel("session_id-login", username)
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
                 return response
 
@@ -510,9 +475,7 @@ def user_publications():
                     return redirect(f'/error?error={error}&status={res.status_code}')
             else:
                 response = redirect('/login')
-                redis_auth.hdel("session_id-login", username)
-                redis_auth.delete("token_" + username)
-                redis_auth.delete("links_" + username)
+                clear_redis(username)
                 response.set_cookie("session_id", "INVALIDATE", max_age=1)
                 return response
 
@@ -562,6 +525,12 @@ def logout():
         response.set_cookie("session_id", "LOGGED_OUT", max_age=1)
         return response
     return redirect("/login")
+
+
+def clear_redis(username):
+    redis_auth.hdel("session_id-login", username)
+    redis_auth.delete("token_" + username)
+    redis_auth.delete("links_" + username)
 
 
 def redirect(location):

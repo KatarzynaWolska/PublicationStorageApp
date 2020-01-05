@@ -54,7 +54,7 @@
                   </HBox>
                   <HBox prefHeight="100.0" prefWidth="200.0" spacing="20.0">
                      <children>
-                        <Label text="Year:">
+                        <Label text="Publication year:">
                            <font>
                               <Font size="18.0" />
                            </font>

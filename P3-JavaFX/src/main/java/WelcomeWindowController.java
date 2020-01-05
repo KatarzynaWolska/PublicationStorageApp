@@ -9,8 +9,6 @@ import java.net.URL;
 
 
 public class WelcomeWindowController {
-    // PODODAWAC ZEBY NIE WYSYLALO FORMY NIE WYPELNIONEJ
-
     @FXML
     private Label welcomeLabel;
 

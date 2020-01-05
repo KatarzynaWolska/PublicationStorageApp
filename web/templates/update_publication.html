@@ -9,10 +9,33 @@
         <form action="/user_publications/{{PID}}/update" method="POST">
             <input type="text" name="title" value="{{title_value}}" placeholder="Title"/>
             <input type="text" name="authors" value="{{authors_value}}" placeholder="Authors"/>
-            <input type="text" name="year" value="{{year_value}}" placeholder="Year"/>
+            <input type="text" name="year" value="{{year_value}}" placeholder="Publication year"/>
             <input type="text" name="publisher" value="{{publisher_value}}" placeholder="Publisher"/>
-            <input type="submit" value="Send"/>
+            <input id="submit_form" type="submit" value="Send"/>
         </form>
     </div>
     </body>
 </html>
+
+<script>
+    var myinput = document.querySelectorAll('input[type="text"]');
+    for(var i=0; i<myinput.length; i++)
+        myinput[i].addEventListener('change', validateForm);
+
+    function validateForm(){
+        isEmpty = true;
+
+        var myinput = document.querySelectorAll('input[type="text"]');
+        for(var i=0; i<myinput.length; i++) {
+            if(myinput[i].value.length === 0) {
+                isEmpty = true;
+                break;
+            } else {
+                isEmpty = false;
+            }
+        }
+
+        var sbm = document.getElementById("submit_form");
+        sbm.disabled = isEmpty;
+    }
+</script>

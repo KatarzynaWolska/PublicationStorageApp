@@ -41,47 +41,54 @@ public class AddPublicationController {
     }
 
     public void sendPublication(ActionEvent actionEvent) {
-        try {
-            JSONObject pubToSend = new JSONObject();
-            pubToSend.put("title", titleTextField.getText());
-            pubToSend.put("authors", authorsTextField.getText());
-            pubToSend.put("year", yearTextField.getText());
-            pubToSend.put("publisher", publisherTextField.getText());
+        if (!isFormFilled()) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Error");
+            alert.setHeaderText("Please fill all fields");
+            alert.showAndWait();
+        } else {
+            try {
+                JSONObject pubToSend = new JSONObject();
+                pubToSend.put("title", titleTextField.getText());
+                pubToSend.put("authors", authorsTextField.getText());
+                pubToSend.put("year", yearTextField.getText());
+                pubToSend.put("publisher", publisherTextField.getText());
 
-            HttpPost request = new HttpPost(URL_addPublication);
-            StringEntity se = new StringEntity(pubToSend.toString());
-            se.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, "application/json"));
-            request.setEntity(se);
-            request.setHeader(new BasicHeader("Authorization", token));
-            HttpResponse response = httpClient.execute(request);
+                HttpPost request = new HttpPost(URL_addPublication);
+                StringEntity se = new StringEntity(pubToSend.toString());
+                se.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, "application/json"));
+                request.setEntity(se);
+                request.setHeader(new BasicHeader("Authorization", token));
+                HttpResponse response = httpClient.execute(request);
 
-            String json = EntityUtils.toString(response.getEntity());
-            JSONObject responseJSON = new JSONObject(json);
+                String json = EntityUtils.toString(response.getEntity());
+                JSONObject responseJSON = new JSONObject(json);
 
-            if (response.getStatusLine().getStatusCode() == 201) {
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Publication added");
-                alert.setHeaderText("Publication added");
-                alert.showAndWait();
+                if (response.getStatusLine().getStatusCode() == 201) {
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Publication added");
+                    alert.setHeaderText("Publication added");
+                    alert.showAndWait();
 
-                PublicationsWindowController controller = new PublicationsWindowController(URL_addPublication, token);
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("publicationsWindow.fxml"));
-                Stage stage = (Stage) titleTextField.getParent().getScene().getWindow();
-                loader.setController(controller);
-                utils.switchView(loader, stage);
+                    PublicationsWindowController controller = new PublicationsWindowController(URL_addPublication, token);
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("publicationsWindow.fxml"));
+                    Stage stage = (Stage) titleTextField.getParent().getScene().getWindow();
+                    loader.setController(controller);
+                    utils.switchView(loader, stage);
 
-            } else {
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Error");
-                alert.setHeaderText(responseJSON.get("message").toString());
-                alert.showAndWait();
+                } else {
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Error");
+                    alert.setHeaderText(responseJSON.get("message").toString());
+                    alert.showAndWait();
 
-                if (response.getStatusLine().getStatusCode() == 401) {
-                    switchViewToLogin();
+                    if (response.getStatusLine().getStatusCode() == 401) {
+                        switchViewToLogin();
+                    }
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
@@ -92,6 +99,14 @@ public class AddPublicationController {
             utils.switchView(loader, stage);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private boolean isFormFilled(){
+        if (!titleTextField.getText().isEmpty() && !authorsTextField.getText().isEmpty() && !yearTextField.getText().isEmpty() && !publisherTextField.getText().isEmpty()) {
+            return true;
+        } else {
+            return false;
         }
     }
 }

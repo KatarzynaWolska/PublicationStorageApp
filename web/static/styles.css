@@ -42,7 +42,7 @@ body {
     margin: 0 0 30px;
     padding: 0;
     color: white;
-    text-align: left; /*center*/
+    text-align: left;
     z-index: 100;
 }
 
@@ -77,7 +77,7 @@ body {
     outline: none;
     padding: 10px 20px;
     cursor: pointer;
-    align-content: center; /*to nie działa*/
+    align-content: center;
     border-radius: 5px;
 }
 

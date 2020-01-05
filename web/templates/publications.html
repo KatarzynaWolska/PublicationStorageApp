@@ -27,11 +27,7 @@
             for(var i = 0; i < publications["length"]; i++) {
                 pubsList += '<a href="/user_publications/' + publications[i]["pub_id"] + '"/>' + (i+1) + '. ' + publications[i]["title"] +'</p>'
             }
-
-            /*for(var key in publications) {
-                pubsList += '<div><a href="' + publications[key] + '">' + key + '</a>'
-            }*/
-
+            
             document.getElementById("publications_list").innerHTML += pubsList
         }
     </script>

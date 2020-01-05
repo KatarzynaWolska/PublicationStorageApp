@@ -27,7 +27,7 @@
                      </HBox.margin></Label>
                   <TextField fx:id="titleTextField">
                      <HBox.margin>
-                        <Insets left="45.0" />
+                        <Insets left="95.0" />
                      </HBox.margin></TextField>
                </children>
             </HBox>
@@ -39,19 +39,19 @@
                      </HBox.margin></Label>
                   <TextField fx:id="authorsTextField">
                      <HBox.margin>
-                        <Insets left="22.0" />
+                        <Insets left="72.0" />
                      </HBox.margin></TextField>
                </children>
             </HBox>
             <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0">
                <children>
-                  <Label text="Year:">
+                  <Label text="Publication year:">
                      <HBox.margin>
                         <Insets left="150.0" />
                      </HBox.margin></Label>
                   <TextField fx:id="yearTextField">
                      <HBox.margin>
-                        <Insets left="45.0" />
+                        <Insets left="20.0" />
                      </HBox.margin></TextField>
                </children>
             </HBox>
@@ -63,7 +63,7 @@
                      </HBox.margin></Label>
                   <TextField fx:id="publisherTextField">
                      <HBox.margin>
-                        <Insets left="15.0" />
+                        <Insets left="65.0" />
                      </HBox.margin></TextField>
                </children>
             </HBox>

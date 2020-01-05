@@ -58,48 +58,55 @@ public class UpdatePublicationWindowController {
     }
 
     public void sendUpdatedPublication(ActionEvent actionEvent) {
-        try {
-            JSONObject pubToSend = new JSONObject();
-            pubToSend.put("title", titleTextField.getText());
-            pubToSend.put("authors", authorsTextField.getText());
-            pubToSend.put("year", yearTextField.getText());
-            pubToSend.put("publisher", publisherTextField.getText());
+        if (!isFormFilled()) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Error");
+            alert.setHeaderText("Please fill all fields");
+            alert.showAndWait();
+        } else {
+            try {
+                JSONObject pubToSend = new JSONObject();
+                pubToSend.put("title", titleTextField.getText());
+                pubToSend.put("authors", authorsTextField.getText());
+                pubToSend.put("year", yearTextField.getText());
+                pubToSend.put("publisher", publisherTextField.getText());
 
-            HttpPut request = new HttpPut(URL_getUpdatePublication);
-            StringEntity se = new StringEntity(pubToSend.toString());
-            se.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, "application/json"));
-            request.setEntity(se);
-            request.setHeader(new BasicHeader("Authorization", token));
-            HttpResponse response = httpClient.execute(request);
+                HttpPut request = new HttpPut(URL_getUpdatePublication);
+                StringEntity se = new StringEntity(pubToSend.toString());
+                se.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, "application/json"));
+                request.setEntity(se);
+                request.setHeader(new BasicHeader("Authorization", token));
+                HttpResponse response = httpClient.execute(request);
 
-            String json = EntityUtils.toString(response.getEntity());
-            JSONObject responseJSON = new JSONObject(json);
+                String json = EntityUtils.toString(response.getEntity());
+                JSONObject responseJSON = new JSONObject(json);
 
-            if (response.getStatusLine().getStatusCode() == 200) {
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle(responseJSON.get("message").toString());
-                alert.setHeaderText(responseJSON.get("message").toString());
-                alert.showAndWait();
+                if (response.getStatusLine().getStatusCode() == 200) {
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle(responseJSON.get("message").toString());
+                    alert.setHeaderText(responseJSON.get("message").toString());
+                    alert.showAndWait();
 
-                PublicationWindowController controller = new PublicationWindowController(URL_getUpdatePublication, URL_uploadFiles, URL_addPublication, token);
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("publicationWindow.fxml"));
-                Stage stage = (Stage) titleTextField.getParent().getScene().getWindow();
-                loader.setController(controller);
-                utils.switchView(loader, stage);
+                    PublicationWindowController controller = new PublicationWindowController(URL_getUpdatePublication, URL_uploadFiles, URL_addPublication, token);
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("publicationWindow.fxml"));
+                    Stage stage = (Stage) titleTextField.getParent().getScene().getWindow();
+                    loader.setController(controller);
+                    utils.switchView(loader, stage);
 
 
-            } else {
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Error");
-                alert.setHeaderText(responseJSON.get("message").toString());
-                alert.showAndWait();
+                } else {
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Error");
+                    alert.setHeaderText(responseJSON.get("message").toString());
+                    alert.showAndWait();
 
-                if (response.getStatusLine().getStatusCode() == 401) {
-                    switchViewToLogin();
+                    if (response.getStatusLine().getStatusCode() == 401) {
+                        switchViewToLogin();
+                    }
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
@@ -110,6 +117,14 @@ public class UpdatePublicationWindowController {
             utils.switchView(loader, stage);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private boolean isFormFilled(){
+        if (!titleTextField.getText().isEmpty() && !authorsTextField.getText().isEmpty() && !yearTextField.getText().isEmpty() && !publisherTextField.getText().isEmpty()) {
+            return true;
+        } else {
+            return false;
         }
     }
 }

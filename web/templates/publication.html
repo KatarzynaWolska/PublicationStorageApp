@@ -9,10 +9,6 @@
             <a href="/logout">Logout</a>
         </div>
 
-        <!--<button>
-            <a href="/user_publications">My publications</a>
-        </button>-->
-
         <div style="margin-bottom: 20px;">
             <form action="/user_publications">
 
@@ -28,9 +24,11 @@
             <h2>Files list:</h2>
         </div>
 
-                <!--<button>
-            <a href="/update_publication_form/{{PID}}">Update publication</a>
-        </button>-->
+        <h2>Upload file</h2>
+        <form action="/user_publications/{{PID}}/upload_file" method="POST" enctype="multipart/form-data">
+            <input type="file" name="file"/>
+            <input type="submit" value="Send"/>
+        </form>
 
         <div style="display:flex; flex-direction: row; justify-content: space-between; align-items: center; padding:20px;">
             <form action="/update_publication_form/{{PID}}">
@@ -38,23 +36,12 @@
                     Update publication
                 </button>
             </form>
-
-            <!--<button>
-                <a href="/user_publications/{{PID}}/delete">Delete publication</a>
-            </button>-->
-
             <form action="/user_publications/{{PID}}/delete">
                 <button>
                     Delete publication
                 </button>
             </form>
         </div>
-
-        <h2>Upload file</h2>
-        <form action="/user_publications/{{PID}}/upload_file" method="POST" enctype="multipart/form-data">
-            <input type="file" name="file"/>
-            <input type="submit" value="Send"/>
-        </form>
 
     </div>
 
@@ -82,9 +69,7 @@
         var files = JSON.parse(f)
 
         for(var key in files) {
-            //filesList += '<div><a href="/user_publications/' + publication["pub_id"] + '/files/' + key + '">' + files[key] + '</a>'
             filesList += '<div style="display:flex; flex-direction: row; justify-content: space-around; margin-bottom: 15px;"><form action="/user_publications/' + publication["pub_id"] + '/files/' + key + '"><button>' + files[key] + '</button></form>'
-            //filesList += '<button><a href="/user_publications/' + publication["pub_id"] + '/files/' + key + '/delete">Delete file</a></button></div>'
             filesList += '<form action="/user_publications/' + publication["pub_id"] + '/files/' + key + '/delete">' + '<button>Delete file</button></form></div>'
         }
 
