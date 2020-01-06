@@ -63,7 +63,6 @@ def auth():
         response.set_cookie("session_id", session_id, max_age=SESSION_TIME)
         response.headers["Location"] = "/welcome"
         redis_auth.set('token_' + username, res.json()['token'])
-        print(res.json()['token'])
         return response
     else:
         response = redirect('/login')
