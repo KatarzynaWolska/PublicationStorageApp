@@ -136,6 +136,9 @@ def get_update_or_delete_publication(pid):
         return HALResponse(response=document.Document(data={'message': 'Publication deleted'}).to_json(), status=200, mimetype="application/hal+json")
 
       elif request.method == 'PUT':
+        if not ("title" in request.json and "authors" in request.json and "year" in request.json and "publisher" in request.json):
+            return HALResponse(response=document.Document(data={'message': 'Error - not all information provided'}).to_json(), status=400, mimetype="application/hal+json")
+
         pubs_json_array.remove(user_pub)
 
         pub_id = user_pub['pub_id']
@@ -171,6 +174,9 @@ def publications():
         data = {'pubs': json.dumps([])}
 
     elif request.method == 'POST':
+      if not ("title" in request.json and "authors" in request.json and "year" in request.json and "publisher" in request.json):
+            return HALResponse(response=document.Document(data={'message': 'Error - not all information provided'}).to_json(), status=400, mimetype="application/hal+json")
+
       pub_id = str(uuid4())
       title = request.json['title']
       authors = request.json['authors']
@@ -206,8 +212,6 @@ def publications():
 
     return HALResponse(response=document.Document(data=data
                                 ,links=api_links).to_json(), status=status, mimetype="application/hal+json")
-    #return json.dumps(document.Document(data=data
-     #                            ,links=api_links).to_dict()) , mimetype="application/hal+json"
 
   else:
       return HALResponse(response=document.Document(data={'message': 'Invalid token - please try again'}).to_json(), status=401, mimetype="application/hal+json")
